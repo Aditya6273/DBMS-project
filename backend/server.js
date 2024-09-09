@@ -11,7 +11,6 @@ import { app, server } from "./socket/socket.js";
 import job from "./cron/cron.js";
 
 dotenv.config();
-console.log(process.env.JWT_SECRET)
 connectDB();
 job.start();
 

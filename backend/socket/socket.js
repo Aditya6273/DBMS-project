@@ -8,34 +8,46 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
 	cors: {
-		origin: "http://localhost:3000",
+		origin: "http://localhost:3000", // Allowing only the frontend to connect
 		methods: ["GET", "POST"],
 	},
 });
+
+const userSocketMap = {}; // userId: socketId
 
 export const getRecipientSocketId = (recipientId) => {
 	return userSocketMap[recipientId];
 };
 
-const userSocketMap = {}; // userId: socketId
-
 io.on("connection", (socket) => {
 	console.log("user connected", socket.id);
 	const userId = socket.handshake.query.userId;
 
-	if (userId != "undefined") userSocketMap[userId] = socket.id;
-	io.emit("getOnlineUsers", Object.keys(userSocketMap));
+	if (userId && userId !== "undefined") {
+		userSocketMap[userId] = socket.id;
+		io.emit("getOnlineUsers", Object.keys(userSocketMap));
+	} else {
+		console.error("Invalid or undefined userId.");
+	}
 
+	// Mark messages as seen and update the conversation's last message seen status
 	socket.on("markMessagesAsSeen", async ({ conversationId, userId }) => {
 		try {
-			await Message.updateMany({ conversationId: conversationId, seen: false }, { $set: { seen: true } });
-			await Conversation.updateOne({ _id: conversationId }, { $set: { "lastMessage.seen": true } });
+			await Message.updateMany(
+				{ conversationId: conversationId, seen: false },
+				{ $set: { seen: true } }
+			);
+			await Conversation.updateOne(
+				{ _id: conversationId },
+				{ $set: { "lastMessage.seen": true } }
+			);
 			io.to(userSocketMap[userId]).emit("messagesSeen", { conversationId });
 		} catch (error) {
-			console.log(error);
+			console.error("Error updating message seen status:", error);
 		}
 	});
 
+	// Handle user disconnect
 	socket.on("disconnect", () => {
 		console.log("user disconnected");
 		delete userSocketMap[userId];

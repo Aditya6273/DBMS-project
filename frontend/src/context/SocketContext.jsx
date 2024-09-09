@@ -15,9 +15,11 @@ export const SocketContextProvider = ({ children }) => {
 	const user = useRecoilValue(userAtom);
 
 	useEffect(() => {
-		const socket = io("/", {
+		if (!user?._id) return; // Only connect if the user is logged in
+		
+		const socket = io("http://localhost:5000", {
 			query: {
-				userId: user?._id,
+				userId: user._id,
 			},
 		});
 
@@ -26,8 +28,17 @@ export const SocketContextProvider = ({ children }) => {
 		socket.on("getOnlineUsers", (users) => {
 			setOnlineUsers(users);
 		});
+
+		socket.on("connect_error", (error) => {
+			console.error("Connection error:", error);
+		});
+
 		return () => socket && socket.close();
 	}, [user?._id]);
 
-	return <SocketContext.Provider value={{ socket, onlineUsers }}>{children}</SocketContext.Provider>;
+	return (
+		<SocketContext.Provider value={{ socket, onlineUsers }}>
+			{children}
+		</SocketContext.Provider>
+	);
 };
