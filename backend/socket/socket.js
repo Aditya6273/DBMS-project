@@ -8,7 +8,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
 	cors: {
-		origin: "http://localhost:3000", // Allowing only the frontend to connect
+		origin: "https://dbms-project-cr06.onrender.com/", // Allowing only the frontend to connect
 		methods: ["GET", "POST"],
 	},
 });
